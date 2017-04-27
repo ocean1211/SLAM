@@ -54,12 +54,17 @@ def kalman_filter_step(belief, control, measurement):
     """Bayes filter step implementation: Kalman filter."""
 
     # --->>> Put your code here.
-    
+    a = 1
+    c = 1
+
     # Prediction.
-    prediction = Density(belief.mu + 10.0, belief.sigma2 + 100.0)  # Replace
+    prediction = Density(a * belief.mu + control.mu,
+                         a*a*belief.sigma2 + control.sigma2)
 
     # Correction.
-    correction = prediction  # Replace
+    K = (c*prediction.sigma2)/(c*c*prediction.sigma2 + measurement.sigma2)
+    correction = Density(prediction.mu + K*(measurement.mu - c*prediction.mu),
+                         (1-K*c)*prediction.sigma2)
 
     return (prediction, correction)
 
