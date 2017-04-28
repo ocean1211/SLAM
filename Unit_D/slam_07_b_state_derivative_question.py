@@ -40,14 +40,17 @@ class ExtendedKalmanFilter:
             # use: m = array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
             # where 1, 2, 3 are the values of the first row of the matrix.
             # Don't forget to return this matrix.
-            m = array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])  # Replace this.
-
+            alpha = (r-l)/w
+            R = l/alpha
+            m = array([[1, 0, (R+w/2)*(cos(theta+alpha)-cos(theta))],
+                       [0, 1, (R+w/2)*(sin(theta+alpha)-sin(theta))],
+                       [0, 0, 1]])
         else:
-
             # --->>> Put your code here.
             # This is for the special case r == l.
-            m = array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])  # Replace this.
-
+            m = array([[1, 0, -l*sin(theta)],
+                       [0, 1,  l*cos(theta)],
+                       [0, 0,  1]])
         return m
 
 

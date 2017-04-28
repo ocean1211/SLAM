@@ -31,22 +31,29 @@ class ExtendedKalmanFilter:
         theta = state[2]
         l, r = tuple(control)
         if r != l:
-
+            alpha = (r - l) / w
+            theta1 = theta + alpha
             # --->>> Put your code here.
             # This is for the case l != r.
             # Note g has 3 components and control has 2, so the result
             # will be a 3x2 (rows x columns) matrix.
-            pass  # Remove this.
-            
-            
+            dg1_dl = w*r/(r-l)**2 *(sin(theta1)-sin(theta)) - (r+l)/2/(r-l)*cos(theta1)
+            dg2_dl = w*r/(r-l)**2 *(-cos(theta1)+cos(theta)) - (r+l)/2/(r-l)*sin(theta1)
+            dg3_dl = -1/w
+            dg1_dr = -w*l/(r-l)**2 *(sin(theta1)-sin(theta)) + (r+l)/2/(r-l)*cos(theta1)
+            dg2_dr = -w*l/(r-l)**2 *(-cos(theta1)+cos(theta)) + (r+l)/2/(r-l)*sin(theta1)
+            dg3_dr = 1/w
         else:
-
             # --->>> Put your code here.
             # This is for the special case l == r.
-            pass  # Remove this.            
+            dg1_dl = (cos(theta)+l/w*sin(theta))/2
+            dg2_dl = (sin(theta)-l/w*cos(theta))/2
+            dg3_dl = -1/w
+            dg1_dr = (cos(theta)-l/w*sin(theta))/2
+            dg2_dr = (sin(theta)+l/w*cos(theta))/2
+            dg3_dr = 1/w
+        m = array([[dg1_dl, dg1_dr], [dg2_dl, dg2_dr], [dg3_dl, dg3_dr]])
 
-        m = array([[1, 2], [3, 4], [5, 6]])  # Remove this.
-            
         return m
 
 
@@ -68,7 +75,7 @@ if __name__ == '__main__':
 
     # Compute derivative numerically.
     print "Numeric differentiation dl, dr"
-    delta = 1e-7
+    delta = 1e-5
     control_l = array([l + delta, r])
     control_r = array([l, r + delta])
     dg_dl = (ExtendedKalmanFilter.g(state, control_l, w) -\
