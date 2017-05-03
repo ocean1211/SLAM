@@ -45,9 +45,26 @@ class ParticleFilter:
 
     def predict(self, control):
         """The prediction step of the particle filter."""
+        l, r = control
 
-        # --->>> Insert code from previous question here.
-        pass  # Remove this.
+        # Compute left and right variance.
+        # alpha_1 is self.control_motion_factor.
+        # alpha_2 is self.control_turn_factor.
+        sigma_l = sqrt((self.control_motion_factor*l) ** 2 + (self.control_turn_factor * (l-r)) ** 2)
+        sigma_r = sqrt((self.control_motion_factor*r) ** 2 + (self.control_turn_factor * (l-r)) ** 2)
+
+        # Then, do a loop over all self.particles and construct a new
+        # list of particles.
+        particles = []
+        for m in self.particles:
+            l_tag = random.gauss(l, sigma_l)
+            r_tag = random.gauss(r, sigma_r)
+            p = self.g(m, [l_tag,r_tag],robot_width)
+            particles.append(p)
+        # In the end, assign the new list of particles to self.particles.
+        # For sampling, use random.gauss(mu, sigma). (Note sigma in this call
+        # is the standard deviation, not the variance.)
+        self.particles = particles
 
     # Measurement. This is exactly the same method as in the Kalman filter.
     @staticmethod
@@ -66,6 +83,11 @@ class ParticleFilter:
         # Compute differences to real measurements.
 
         # --->>> Compute difference in distance and bearing angle.
+        measurement_angle = (measurement[1]) % (2 * pi) - pi
+        predicted_angle = (predicted_measurement[1]) % (2 * pi) - pi
+        prob_of_measure = normal_dist.pdf(measurement[0] - predicted_measurement[0], 0, self.measurement_distance_stddev) * \
+                          normal_dist.pdf((measurement_angle - predicted_angle), 0, self.measurement_angle_stddev)
+
         # Important: make sure the angle difference works correctly and does
         # not return values offset by 2 pi or - 2 pi.
         # You may use the following Gaussian PDF function:
@@ -74,7 +96,7 @@ class ParticleFilter:
         # Note that the two parameters sigma_d and sigma_alpha discussed
         # in the lecture are self.measurement_distance_stddev and
         # self.measurement_angle_stddev.
-        return 1.0  # Replace this.
+        return prob_of_measure
 
     def compute_weights(self, cylinders, landmarks):
         """Computes one weight for each particle, returns list of weights."""
@@ -85,20 +107,33 @@ class ParticleFilter:
             assignment = assign_cylinders(cylinders, p,
                 self.scanner_displacement, landmarks)
 
-            # --->>> Insert code to compute weight for particle p here.
             # This will require a loop over all (measurement, landmark)
             # in assignment. Append weight to the list of weights.
-            weights.append(1.0)  # Replace this.
+            weight = 1
+            for measurement, landmark in assignment:
+                predicted_measurement = self.h(p, landmark, self.scanner_displacement)
+                prob_of_measure = self.probability_of_measurement(measurement, predicted_measurement)
+                weight *= prob_of_measure
+            weights.append(weight)
         return weights
 
     def resample(self, weights):
         """Return a list of particles which have been resampled, proportional
            to the given weights."""
 
-        # --->>> Insert your code here.
         # You may implement the 'resampling wheel' algorithm
         # described in the lecture.
-        new_particles = self.particles  # Replace this.
+        M = len(weights)
+        new_particles = []
+        max_weight = max(weights)
+        index =random.randint(0, M-1)
+        offset = 0
+        for i in range(M):
+            offset += random.uniform(0, 2*max_weight)
+            while weights[index%M] < offset:
+                offset -= weights[index%M]
+                index += 1
+            new_particles.append(self.particles[index%M])
         return new_particles
 
     def correct(self, cylinders, landmarks):
