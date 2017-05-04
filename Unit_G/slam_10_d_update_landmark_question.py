@@ -51,23 +51,39 @@ class Particle:
                                             scanner_displacement):
         """Returns the expected distance and bearing measurement for a given
            landmark number and the pose of this particle."""
-        # --->>> Insert your previous code here.
-        return np.array([0.0, 0.0])  # Replace this.
+        # Note: This is just one line of code!
+        # Hints:
+        # - the static function h() computes the desired value
+        # - the state is the robot's pose
+        # - the landmark is taken from self.landmark_positions.
+
+        return self.h(self.pose, self.landmark_positions[landmark_number], scanner_displacement)
 
     def H_Ql_jacobian_and_measurement_covariance_for_landmark(
         self, landmark_number, Qt_measurement_covariance, scanner_displacement):
         """Computes Jacobian H of measurement function at the particle's
            position and the landmark given by landmark_number. Also computes the
            measurement covariance matrix."""
-        # --->>> Insert your previous code here.
-        H = np.eye(2)  # Replace this.
-        Ql = np.eye(2)  # Replace this.
+
+        H = self.dh_dlandmark(self.pose, self.landmark_positions[landmark_number], scanner_displacement)
+        Ql = (H.dot(self.landmark_covariances[landmark_number])).dot(H.T) \
+             + Qt_measurement_covariance
+
+        # Hints:
+        # - H is computed using dh_dlandmark.
+        # - To compute Ql, you will need the product of two matrices,
+        #   which is np.dot(A, B).
         return (H, Ql)
 
     def update_landmark(self, landmark_number, measurement,
                         Qt_measurement_covariance, scanner_displacement):
         """Update a landmark's estimated position and covariance."""
-        # --->>> Insert your new code here.
+
+        (H, Ql) = self.H_Ql_jacobian_and_measurement_covariance_for_landmark(landmark_number, Qt_measurement_covariance, scanner_displacement)
+        K = (self.landmark_covariances[landmark_number].dot(H.T)).dot(np.linalg.inv(Ql))
+        expected_measurement = self.h_expected_measurement_for_landmark(landmark_number,scanner_displacement)
+        self.landmark_positions[landmark_number] = self.landmark_positions[landmark_number] + K*(measurement - expected_measurement)
+        self.landmark_covariances[landmark_number] = (np.eye(2) - K.dot(H)).dot(self.landmark_covariances[landmark_number])
         # Hints:
         # - H and Ql can be computed using
         #   H_Ql_jacobian_and_measurement_covariance_for_landmark()
@@ -77,8 +93,6 @@ class Particle:
         #   h_expected_measurement_for_landmark()
         # - Remember to update landmark_positions[landmark_number] as well
         #   as landmark_covariances[landmark_number].
-        pass  # Replace this.
-
 
 def insert_landmarks(particle):
     """Insert the landmarks from the slam_10_c_new_landmark exercise."""

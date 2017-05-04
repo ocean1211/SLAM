@@ -45,7 +45,12 @@ class Particle:
         scanner_pose = (self.pose[0] + cos(self.pose[2]) * scanner_displacement,
                         self.pose[1] + sin(self.pose[2]) * scanner_displacement,
                         self.pose[2])
-        # --->>> Insert your code here.
+        m = LegoLogfile.scanner_to_world(scanner_pose, measurement_in_scanner_system)
+
+        H = self.dh_dlandmark(self.pose, m, scanner_displacement)
+        Hinv = np.linalg.inv(H)
+        covariance =  (Hinv.dot(Qt_measurement_covariance)).dot(Hinv.T)
+
         # Hints:
         # - LegoLogfile.scanner_to_world() (from lego_robot.py) will return
         #   the world coordinate, given the scanner pose and the coordinate in
@@ -53,9 +58,9 @@ class Particle:
         # - H is obtained from dh_dlandmark()
         # - Use np.linalg.inv(A) to invert matrix A
         # - As usual, np.dot(A,B) is the matrix product of A and B.
-        self.landmark_positions.append(np.array([0.0, 0.0]))  # Replace this.
-        self.landmark_covariances.append(np.eye(2))  # Replace this.
 
+        self.landmark_positions.append(np.array(m))
+        self.landmark_covariances.append(covariance)
 
 if __name__ == '__main__':
     # Robot constants.

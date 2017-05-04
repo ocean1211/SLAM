@@ -51,26 +51,28 @@ class Particle:
                                             scanner_displacement):
         """Returns the expected distance and bearing measurement for a given
            landmark number and the pose of this particle."""
-        # --->>> Insert your code here.
         # Note: This is just one line of code!
         # Hints:
         # - the static function h() computes the desired value
         # - the state is the robot's pose
         # - the landmark is taken from self.landmark_positions.
-        return np.array([0.0, 0.0])  # Replace this.
+
+        return self.h(self.pose, self.landmark_positions[landmark_number], scanner_displacement)
 
     def H_Ql_jacobian_and_measurement_covariance_for_landmark(
         self, landmark_number, Qt_measurement_covariance, scanner_displacement):
         """Computes Jacobian H of measurement function at the particle's
            position and the landmark given by landmark_number. Also computes the
            measurement covariance matrix."""
-        # --->>> Insert your code here.
+
+        H = self.dh_dlandmark(self.pose, self.landmark_positions[landmark_number], scanner_displacement)
+        Ql = (H.dot(self.landmark_covariances[landmark_number])).dot(H.T) \
+             + Qt_measurement_covariance
+
         # Hints:
         # - H is computed using dh_dlandmark.
         # - To compute Ql, you will need the product of two matrices,
         #   which is np.dot(A, B).
-        H = np.eye(2)  # Replace this.
-        Ql = np.eye(2)  # Replace this.
         return (H, Ql)
 
     def wl_likelihood_of_correspondence(self, measurement,
@@ -79,7 +81,11 @@ class Particle:
                                         scanner_displacement):
         """For a given measurement and landmark_number, returns the likelihood
            that the measurement corresponds to the landmark."""
-        # --->>> Insert your code here.
+
+        delta_z = measurement - self.h_expected_measurement_for_landmark(landmark_number,scanner_displacement)
+        (H,Ql) = self.H_Ql_jacobian_and_measurement_covariance_for_landmark(landmark_number,Qt_measurement_covariance,scanner_displacement)
+        likelihood = 1./2/pi/sqrt(np.linalg.det(Ql)) * exp(-0.5*((delta_z.T.dot(np.linalg.inv(Ql))).dot(delta_z)))
+
         # Hints:
         # - You will need delta_z, which is the measurement minus the
         #   expected_measurement_for_landmark()
@@ -88,7 +94,7 @@ class Particle:
         #   will only need Ql, not H
         # - np.linalg.det(A) computes the determinant of A
         # - np.dot() does not distinguish between row and column vectors.
-        return 0.01 # Replace this.
+        return likelihood
 
     def compute_correspondence_likelihoods(self, measurement,
                                            number_of_landmarks,
