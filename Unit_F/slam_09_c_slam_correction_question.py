@@ -31,7 +31,7 @@ class ExtendedKalmanFilterSLAM:
 
     @staticmethod
     def g(state, control, w):
-        x, y, theta = state
+        x, y, theta = state[:3]
         l, r = control
         if r != l:
             alpha = (r - l) / w
@@ -95,26 +95,66 @@ class ExtendedKalmanFilterSLAM:
         # Covariance in control space depends on move distance.
         G3 = self.dg_dstate(self.state, control, self.robot_width)
         left, right = control
-        left_var = (self.control_motion_factor * left)**2 +\
-                   (self.control_turn_factor * (left-right))**2
-        right_var = (self.control_motion_factor * right)**2 +\
-                    (self.control_turn_factor * (left-right))**2
+        left_var = (self.control_motion_factor * left) ** 2 + \
+                   (self.control_turn_factor * (left - right)) ** 2
+        right_var = (self.control_motion_factor * right) ** 2 + \
+                    (self.control_turn_factor * (left - right)) ** 2
         control_covariance = diag([left_var, right_var])
         V = self.dg_dcontrol(self.state, control, self.robot_width)
         R3 = dot(V, dot(control_covariance, V.T))
 
-        # --->>> Put here your previous code to compute the new
-        #        covariance and state.
+        N = self.number_of_landmarks
+        G = eye(3 + 2 * N, 3 + 2 * N)
+        G[:3, :3] = G3
+        R = eye(3 + 2 * N, 3 + 2 * N)
+        R[:3, :3] = R3
+
+        # Hints:
+        # - The number of landmarks is self.number_of_landmarks.
+        # - eye(n) is the numpy function which returns a n x n identity matrix.
+        # - zeros((n,n)) returns a n x n matrix which is all zero.
+        # - If M is a matrix, M[0:2,1:5] returns the submatrix which consists
+        #   of the rows 0 and 1 (but not 2) and the columns 1, 2, 3, 4.
+        #   This submatrix operator can be used on either side of an assignment.
+        # - Similarly for vectors: v[1:3] returns the vector consisting of the
+        #   elements 1 and 2, but not 3.
+        # - All matrix and vector indices start at 0.
+
+        # Now enlarge G3 and R3 to accomodate all landmarks. Then, compute the
+        # new covariance matrix self.covariance.
+        self.covariance = dot(G, dot(self.covariance, G.T)) + R  # Replace this.
+        # state' = g(state, control)
+        self.state[:3] = self.g(self.state, control, self.robot_width)  # Replace this.
 
     def add_landmark_to_state(self, initial_coords):
         """Enlarge the current state and covariance matrix to include one more
            landmark, which is given by its initial_coords (an (x, y) tuple).
            Returns the index of the newly added landmark."""
-        
-        # --->>> Put here your previous code to augment the robot's state and
-        #        covariance matrix.
 
-        return -1  # Replace this.
+        # augment the robot's state and covariance matrix.
+        #        Initialize the state with the given initial_coords and the
+        #        covariance with 1e10 (as an approximation for "infinity".
+        self.state = concatenate((self.state, array(initial_coords)))
+
+        N = self.number_of_landmarks
+        C = zeros((3+2*N+2,3+2*N+2))
+        C[:3+2*N,:3+2*N] = self.covariance
+        C[3+2*N,3+2*N] = C[3+2*N+1,3+2*N+1] = 1e10
+        self.covariance = C
+
+        self.number_of_landmarks += 1
+
+        # Hints:
+        # - If M is a matrix, use M[i:j,k:l] to obtain the submatrix of
+        #   rows i to j-1 and colums k to l-1. This can be used on the left and
+        #   right side of the assignment operator.
+        # - zeros(n) gives a zero vector of length n, eye(n) an n x n identity
+        #   matrix.
+        # - Do not forget to increment self.number_of_landmarks.
+        # - Do not forget to return the index of the newly added landmark. I.e.,
+        #   the first call should return 0, the second should return 1.
+
+        return self.number_of_landmarks-1
 
     @staticmethod
     def h(state, landmark, scanner_displacement):
@@ -152,7 +192,10 @@ class ExtendedKalmanFilterSLAM:
         H3 = self.dh_dstate(self.state, landmark, self.scanner_displacement)
 
         # --->>> Add your code here to set up the full H matrix.
-        H = H3  # Replace this.
+        N = self.number_of_landmarks
+        H = zeros((2,3+2*N))
+        H[:,:3] = H3
+        H[:,(3+landmark_index*2):(5+landmark_index*2)] = -H3[:,:2]
 
         # This is the old code from the EKF - no modification necessary!
         Q = diag([self.measurement_distance_stddev**2,

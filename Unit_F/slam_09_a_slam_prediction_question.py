@@ -97,7 +97,11 @@ class ExtendedKalmanFilterSLAM:
         V = self.dg_dcontrol(self.state, control, self.robot_width)
         R3 = dot(V, dot(control_covariance, V.T))
 
-        # --->>> Put your code here.
+        N = self.number_of_landmarks
+        G = eye(3+2*N, 3+2*N)
+        G[:3,:3] = G3
+        R = eye(3+2*N, 3+2*N)
+        R[:3,:3] = R3
 
         # Hints:
         # - The number of landmarks is self.number_of_landmarks.
@@ -112,7 +116,7 @@ class ExtendedKalmanFilterSLAM:
 
         # Now enlarge G3 and R3 to accomodate all landmarks. Then, compute the
         # new covariance matrix self.covariance.
-        self.covariance = dot(G3, dot(self.covariance, G3.T)) + R3  # Replace this.
+        self.covariance = dot(G, dot(self.covariance, G.T)) + R  # Replace this.
         # state' = g(state, control)
         self.state = self.g(self.state, control, self.robot_width)  # Replace this.
 
